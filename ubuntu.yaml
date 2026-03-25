@@ -74,6 +74,23 @@ autoinstall:
       cd /target
       curl -LO $confhome/resize.sh
 
+      # 下载并配置 frpc
+      if [ -s /configs/frpc.toml ]; then
+          url=$(sh $confhome/get-frpc-url.sh linux)
+          mkdir -p /target/usr/local/bin
+          mkdir -p /target/usr/local/etc/frpc
+          for _ in {1..10}; do
+              if wget -O- "$url" | tar xz "*/frpc" -O >/target/usr/local/bin/frpc; then
+                  break
+              fi
+              sleep 5
+          done
+          chmod a+x /target/usr/local/bin/frpc
+          cp /configs/frpc.toml /target/usr/local/etc/frpc/
+          cp $confhome/frpc.service /target/etc/systemd/system/
+          curtin in-target --target=/target -- systemctl enable frpc
+      fi
+
       # 升级 cloud-init
       # curtin in-target --target=/target -- apt update
       # curtin in-target --target=/target -- apt install --only-upgrade cloud-init
